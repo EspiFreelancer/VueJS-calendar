@@ -1,59 +1,31 @@
+<!-- Vuetify v2.1.7 -->
 <template>
   <v-row class="fill-height">
     <v-col>
       <v-sheet height="64">
-        <v-toolbar
-          flat
-        >
-          <v-btn
-            outlined
-            class="mr-4"
-            color="grey darken-2"
-            @click="setToday"
-          >
+        <v-toolbar flat color="white">
+
+          <!-- Add Event Button -->
+
+          <v-btn outlined class="mr-4" @click="setToday">
             Today
           </v-btn>
-          <v-btn
-            fab
-            text
-            small
-            color="grey darken-2"
-            @click="prev"
-          >
-            <v-icon small>
-              mdi-chevron-left
-            </v-icon>
+          <v-btn fab text small @click="prev">
+            <v-icon small>mdi-chevron-left</v-icon>
           </v-btn>
-          <v-btn
-            fab
-            text
-            small
-            color="grey darken-2"
-            @click="next"
-          >
-            <v-icon small>
-              mdi-chevron-right
-            </v-icon>
+          <v-btn fab text small @click="next">
+            <v-icon small>mdi-chevron-right</v-icon>
           </v-btn>
-          <v-toolbar-title v-if="$refs.calendar">
-            {{ $refs.calendar.title }}
-          </v-toolbar-title>
+          <v-toolbar-title>{{ title }}</v-toolbar-title>
           <v-spacer></v-spacer>
-          <v-menu
-            bottom
-            right
-          >
-            <template v-slot:activator="{ on, attrs }">
+          <v-menu bottom right>
+            <template v-slot:activator="{ on }">
               <v-btn
                 outlined
-                color="grey darken-2"
-                v-bind="attrs"
                 v-on="on"
               >
                 <span>{{ typeToLabel[type] }}</span>
-                <v-icon right>
-                  mdi-menu-down
-                </v-icon>
+                <v-icon right>mdi-menu-down</v-icon>
               </v-btn>
             </template>
             <v-list>
@@ -80,12 +52,17 @@
           color="primary"
           :events="events"
           :event-color="getEventColor"
+          :event-margin-bottom="3"
+          :now="today"
           :type="type"
           @click:event="showEvent"
           @click:more="viewDay"
           @click:date="viewDay"
           @change="updateRange"
         ></v-calendar>
+
+        <!-- Add Modal Add Event -->
+
         <v-menu
           v-model="selectedOpen"
           :close-on-content-click="false"
@@ -97,6 +74,7 @@
             min-width="350px"
             flat
           >
+            <!-- Add Edit and Delete Functionalities -->
             <v-toolbar
               :color="selectedEvent.color"
               dark
@@ -135,7 +113,8 @@
 <script>
   export default {
     data: () => ({
-      focus: '',
+      today: new Date().toISOString().substr(0, 10),
+      focus: new Date().toISOString().substr(0, 10),
       type: 'month',
       typeToLabel: {
         month: 'Month',
@@ -143,13 +122,54 @@
         day: 'Day',
         '4day': '4 Days',
       },
+      start: null,
+      end: null,
       selectedEvent: {},
       selectedElement: null,
       selectedOpen: false,
       events: [],
-      colors: ['blue', 'indigo', 'deep-purple', 'cyan', 'green', 'orange', 'grey darken-1'],
-      names: ['Meeting', 'Holiday', 'PTO', 'Travel', 'Event', 'Birthday', 'Conference', 'Party'],
+      // Additional...
+      name: null,
+      details: null,
+      color: '#19D250',
+      dialog: false,
+      currentlyEditing: null
     }),
+    computed: {
+      title () {
+        const { start, end } = this
+        if (!start || !end) {
+          return ''
+        }
+
+        const startMonth = this.monthFormatter(start)
+        const endMonth = this.monthFormatter(end)
+        const suffixMonth = startMonth === endMonth ? '' : endMonth
+
+        const startYear = start.year
+        const endYear = end.year
+        const suffixYear = startYear === endYear ? '' : endYear
+
+        const startDay = start.day + this.nth(start.day)
+        const endDay = end.day + this.nth(end.day)
+
+        switch (this.type) {
+          case 'month':
+            return `${startMonth} ${startYear}`
+          case 'week':
+          case '4day':
+            return `${startMonth} ${startDay} ${startYear} - ${suffixMonth} ${endDay} ${suffixYear}`
+          case 'day':
+            return `${startMonth} ${startDay} ${startYear}`
+        }
+        return ''
+      },
+      monthFormatter () {
+        return this.$refs.calendar.getFormatter({
+          timeZone: 'UTC', month: 'long',
+        })
+      },
+    },
     mounted () {
       this.$refs.calendar.checkChange()
     },
@@ -162,7 +182,7 @@
         return event.color
       },
       setToday () {
-        this.focus = ''
+        this.focus = this.today
       },
       prev () {
         this.$refs.calendar.prev()
@@ -174,9 +194,7 @@
         const open = () => {
           this.selectedEvent = event
           this.selectedElement = nativeEvent.target
-          setTimeout(() => {
-            this.selectedOpen = true
-          }, 10)
+          setTimeout(() => this.selectedOpen = true, 10)
         }
 
         if (this.selectedOpen) {
@@ -189,33 +207,14 @@
         nativeEvent.stopPropagation()
       },
       updateRange ({ start, end }) {
-        const events = []
-
-        const min = new Date(`${start.date}T00:00:00`)
-        const max = new Date(`${end.date}T23:59:59`)
-        const days = (max.getTime() - min.getTime()) / 86400000
-        const eventCount = this.rnd(days, days + 20)
-
-        for (let i = 0; i < eventCount; i++) {
-          const allDay = this.rnd(0, 3) === 0
-          const firstTimestamp = this.rnd(min.getTime(), max.getTime())
-          const first = new Date(firstTimestamp - (firstTimestamp % 900000))
-          const secondTimestamp = this.rnd(2, allDay ? 288 : 8) * 900000
-          const second = new Date(first.getTime() + secondTimestamp)
-
-          events.push({
-            name: this.names[this.rnd(0, this.names.length - 1)],
-            start: first,
-            end: second,
-            color: this.colors[this.rnd(0, this.colors.length - 1)],
-            timed: !allDay,
-          })
-        }
-
-        this.events = events
+        // You could load events from an outside source (like database) now that we have the start and end dates on the calendar
+        this.start = start
+        this.end = end
       },
-      rnd (a, b) {
-        return Math.floor((b - a + 1) * Math.random()) + a
+      nth (d) {
+        return d > 3 && d < 21
+          ? 'th'
+          : ['th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th'][d % 10]
       },
     },
   }
