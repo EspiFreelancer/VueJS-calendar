@@ -111,6 +111,8 @@
 </template>
 
 <script>
+  import {db} from '../main.js'
+
   export default {
     data: () => ({
       today: new Date().toISOString().substr(0, 10),
@@ -128,7 +130,7 @@
       selectedElement: null,
       selectedOpen: false,
       events: [],
-      // Additional...
+      // Additions
       name: null,
       details: null,
       color: '#19D250',
@@ -173,7 +175,25 @@
     mounted () {
       this.$refs.calendar.checkChange()
     },
+    created() {
+      this.getEvents();
+    },
     methods: {
+    async getEvents() {
+      try {
+        const snapshot = await db.collection("testEvent").get();
+        const events = [];
+        snapshot.forEach(doc => {
+          // console.log(doc.data()); //Error: undefined fields in db
+          let appData = doc.data();
+          appData.id = doc.id;
+          events.push(appData);
+        });
+        this.events = events;
+      } catch (error) {
+        console.log(error);
+      }
+    },
       viewDay ({ date }) {
         this.focus = date
         this.type = 'day'
