@@ -1,3 +1,3 @@
-#VueJS-practice
+#VueJS-calendar
 
-This repository contains a series of exercises done with Vue.js. These are organized in a folder.
+Building a calendar using Vue.js, Vuetify & Firebase.
