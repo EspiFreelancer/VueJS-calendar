@@ -4,9 +4,10 @@
     <v-col>
       <v-sheet height="64">
         <v-toolbar flat color="white">
-
           <!-- Add Event Button -->
-
+          <v-btn color="primary" dark class="mr-4" @click="dialog = true">
+            Agregar
+          </v-btn>
           <v-btn outlined class="mr-4" @click="setToday">
             Today
           </v-btn>
@@ -62,6 +63,21 @@
         ></v-calendar>
 
         <!-- Add Modal Add Event -->
+        <v-dialog v-model="dialog">
+          <v-card>
+            <v-container>
+              <v-form @submit.prevent="addEvent">
+                <v-text-field v-model="name" type="text" label="Agregar nombre" ></v-text-field>
+                <v-text-field v-model="details" type="text" label="Detalles" ></v-text-field>
+                <v-text-field v-model="start" type="date" label="Inicio" ></v-text-field>
+                <v-text-field v-model="end" type="date" label="Fin" ></v-text-field>
+                <v-text-field v-model="color" type="color" label="Color" ></v-text-field>
+                <v-btn type="submit" color="primary" class="mr-4" @click.stop="sialog = false">Crear Evento</v-btn>
+              </v-form>
+            </v-container>
+          </v-card>
+        </v-dialog>
+
 
         <v-menu
           v-model="selectedOpen"
@@ -179,12 +195,35 @@
       this.getEvents();
     },
     methods: {
+    async addEvent() {
+      try {
+        if(this.name && this.start && this.end){
+          await db.collection('calEvent').add({
+            name: this.name,
+            details: this.details,
+            start: this.start,
+            end: this.end,
+            color: this.color,
+          })
+          this.getEvents();
+          this.name = '';
+          this.details = '';
+          this.start = '';
+          this.end = '';
+          this.color = '#19D250';
+        }else{
+          alert('Faltan campos requeridos')
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    },
+
     async getEvents() {
       try {
-        const snapshot = await db.collection("testEvent").get();
+        const snapshot = await db.collection("calEvent").get();
         const events = [];
         snapshot.forEach(doc => {
-          // console.log(doc.data()); //Error: undefined fields in db
           let appData = doc.data();
           appData.id = doc.id;
           events.push(appData);
